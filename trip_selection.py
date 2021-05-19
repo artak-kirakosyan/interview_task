@@ -60,7 +60,7 @@ class Trip:
         """
         start = randint(cls.__MIN, cls.__MAX)
         end_max = min(cls.__MAX, start + cls.__STEP)
-        end = randint(start, end_max)
+        end = randint(start + 1, end_max)
 
         if use_fixed_priority:
             priority = cls.__PRIORITIES[0]
@@ -150,18 +150,16 @@ def remove_most_colliding_until_no_collisions(trips: List[Trip]) -> List[Trip]:
         max_collisions_trip = None
         for trip, trip_collisions in collisions.items():
             curr_collision_count = len(trip_collisions)
-            if curr_collision_count > max_collisions:
+            if curr_collision_count >= max_collisions:
                 max_collisions = curr_collision_count
                 max_collisions_trip = trip
-        if max_collisions_trip is None:
+        if max_collisions == 0:
             break
 
         for trip in collisions[max_collisions_trip]:
             collisions[trip].remove(max_collisions_trip)
         collisions.pop(max_collisions_trip)
-    print("Done done")
     no_collision_trips = list(collisions.keys())
-    # no_collision_trips.sort(key=lambda x: (x.start, x.end))
     return no_collision_trips
 
 
