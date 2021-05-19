@@ -58,7 +58,7 @@ class Trip:
         :param trip_id: id of the trip, if none, random UUID integer is used
         :return: Trip object with random properties
         """
-        start = randint(cls.__MIN, cls.__MAX)
+        start = randint(cls.__MIN, cls.__MAX - 1)
         end_max = min(cls.__MAX, start + cls.__STEP)
         end = randint(start + 1, end_max)
 
@@ -80,10 +80,13 @@ class Trip:
         """
         if not isinstance(other, self.__class__):
             raise TypeError("Cant compare Trip with other types")
-
-        if self.start <= other.start <= self.end:
-            return True
-        elif self.start <= other.end <= self.end:
+        collision_conditions = (
+            self.start <= other.start <= self.end,
+            self.start <= other.end <= self.end,
+            other.start <= self.start <= other.end,
+            other.start <= self.end <= other.end,
+        )
+        if any(collision_conditions):
             return True
         return False
 
@@ -119,6 +122,7 @@ def calculate_collisions(trips: List[Trip]) -> Dict[Trip, List[Trip]]:
 def start_from_the_beginning_and_remove_collisions(trips: List[Trip]):
     """
     Start from the first trip and remove all colliding one by one until no collisions are present
+    It is assumed that the data is sorted by (trip.start, trip.end) key.
     :param trips: list of trips to filter
     :return: list of non colliding trips
     """
@@ -141,6 +145,8 @@ def remove_most_colliding_until_no_collisions(trips: List[Trip]) -> List[Trip]:
     :param trips: list of trips to select from
     :return: non colliding list of trips
     """
+    if len(trips) < 2:
+        return trips
     print("Collision calculation started")
     collisions = calculate_collisions(trips)
     print("Collision calculation done")
@@ -183,22 +189,23 @@ def find_highest_priority_trips(trips: List[Trip]) -> Tuple[int, List[Trip]]:
     return highest_priority, highest_priority_trips
 
 
-def remove_collisions(constant_trips: List[Trip], to_filter: List[Trip]) -> None:
+def remove_collisions(constant_trips: List[Trip], to_filter: List[Trip]) -> List[Trip]:
     """
     Remove all trips from to_filter if it collides with anything from constant
     :param constant_trips: list of trips that is the baseline
     :param to_filter: list of trips to filter if they collide with constant
     :return: None
     """
-    i = 0
-    while i < len(to_filter):
-        trip = to_filter[i]
+    non_colliding = []
+    while to_filter:
+        trip = to_filter.pop(0)
         for constant_trip in constant_trips:
-            if trip.is_colliding(constant_trip):
-                to_filter.remove(trip)
+            is_colliding = trip.is_colliding(constant_trip)
+            if is_colliding:
                 break
         else:
-            i += 1
+            non_colliding.append(trip)
+    return non_colliding
 
 
 def remove_given_priority(trips: List[Trip], priority: int) -> List[Trip]:
@@ -231,7 +238,7 @@ def assign_trips(trips: List[Trip], use_most_colliding_algorithm=True) -> List[T
     while trips:
         highest_priority, highest_priority_trips = find_highest_priority_trips(trips)
         remove_given_priority(trips=trips, priority=highest_priority)
-        remove_collisions(constant_trips=assigned, to_filter=highest_priority_trips)
+        highest_priority_trips = remove_collisions(constant_trips=assigned, to_filter=highest_priority_trips)
 
         if use_most_colliding_algorithm:
             currently_assigned_trips = remove_most_colliding_until_no_collisions(trips=highest_priority_trips)
@@ -244,8 +251,8 @@ def assign_trips(trips: List[Trip], use_most_colliding_algorithm=True) -> List[T
 
 def measure_total_wait_time_between_trips(trips: List[Trip]) -> Tuple[int, int]:
     """
-    Given a list of non colliding trips sorted by their (start, end) times, calculate what is the wait time between
-    trips.
+    Given a list of non colliding trips sorted by their (start, end) times,
+    calculate what is the wait time between trips.
     :param trips: list of non colliding trips
     :return: sum of all wait times in between
     """

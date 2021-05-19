@@ -16,7 +16,7 @@ def test_pandas():
 
 def test_assignment():
     print("Generating")
-    n_trips = get_n_random_trips(40, use_fixed_priority=True)
+    n_trips = get_n_random_trips(40, use_fixed_priority=False)
     print("Generation done")
 
     first = copy.deepcopy(n_trips)
